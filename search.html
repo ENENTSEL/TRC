@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRC選手名單搜尋平台</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-image: url('PNG/000.png'); /* 替換為你的背景圖片路徑 */
+      background-size: cover; /* 背景圖片將填滿整個屏幕 */
+      background-position: center;
+      background-repeat: repeat;
+    }
+    .container {
+      background-color: rgba(251, 255, 0, 0.8); /* 用於容器的半透明背景 */
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+  <h3 style="text-align: center;">TRC選手名單搜尋平台</h3>
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <form id="search-form" class="form-inline" onsubmit="searchPlayers(); return false;">
+          <input style="width:80%;" type="text" id="searchtext" name="searchtext" placeholder="請輸入城市名">
+          <button type="submit" class="btn btn-primary">搜尋Search</button>
+        </form>
+        <div id="search-results" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    const apiKey = 'AIzaSyD7NugrU2Aftwn9WE1-OGSVK24ER8AGGpA'; // 替換為你的 Google Sheets API 金鑰
+    const spreadsheetId = '1ux-sfooC_sBwKwT6qyVBKP1xoVFbc2jVkF9HQn6HjEg'; // 替換為你的 Google Sheets 試算表 ID
+    const sheetName = '表單!A:E'; // 替換為你的工作表名稱和搜尋範圍（A 到 E 欄）
+
+    function searchPlayers() {
+      const searchText = document.getElementById('searchtext').value;
+      const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}?key=${apiKey}`;
+
+      // 發送請求到 Google Sheets API
+      axios.get(apiUrl)
+        .then(response => {
+          const values = response.data.values;
+          if (values) {
+            const searchResults = filterAndSortData(values, searchText); // 過濾和排序資料
+            displaySearchResults(searchResults);
+          } else {
+            document.getElementById('search-results').innerHTML = '<p>沒有找到任何數據。</p>';
+          }
+        })
+        .catch(error => {
+          console.error('搜尋失敗:', error);
+          document.getElementById('search-results').innerHTML = '<p>搜尋失敗。</p>';
+        });
+    }
+
+    function filterAndSortData(data, searchText) {
+      const filteredData = data.filter(row => row[1] === searchText); // 搜尋第二列（城市）
+      const playerMap = new Map();
+      filteredData.forEach(row => {
+        const name = row[0];
+        const time = new Date(row[0]);
+        if (!playerMap.has(name) || playerMap.get(name).time < time) {
+          playerMap.set(name, {time, data: row});
+        }
+      });
+      const sortedData = Array.from(playerMap.values()).map(entry => entry.data);
+      return sortedData;
+    }
+
+    function displaySearchResults(results) {
+      const searchResultsContainer = document.getElementById('search-results');
+      searchResultsContainer.innerHTML = ''; // 清空之前的搜索結果
+      if (results.length === 0) {
+        searchResultsContainer.innerHTML = '<p>沒有找到匹配的選手。</p>';
+      } else {
+        results.forEach(player => {
+          const playerInfo = document.createElement('div');
+          playerInfo.classList.add('player-info');
+
+          const name = document.createElement('p');
+          name.textContent = '填表時間：' + player[0];
+
+          const city = document.createElement('p');
+          city.textContent = '戰隊名：' + player[1];
+
+          const age = document.createElement('p');
+          age.textContent = '隊徽連結：' + player[2];
+
+          const team = document.createElement('p');
+          team.textContent = '選手暱稱：' + player[3];
+
+          const position = document.createElement('p');
+          position.textContent = '選手UID：' + player[4];
+
+          playerInfo.appendChild(name);
+          playerInfo.appendChild(city);
+          playerInfo.appendChild(age);
+          playerInfo.appendChild(team);
+          playerInfo.appendChild(position);
+
+          searchResultsContainer.appendChild(playerInfo);
+        });
+      }
+    }
+  </script>
+</body>
+</html>
